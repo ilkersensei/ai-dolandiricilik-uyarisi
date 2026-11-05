@@ -411,7 +411,9 @@ kbd,.mono{font-family:var(--f-mono)}
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-const sleep=ms=>new Promise(r=>setTimeout(r,RM?Math.min(ms,160):ms));
+let fast=false;
+const PACE=.38;
+const sleep=ms=>new Promise(r=>setTimeout(r,fast?0:RM?Math.min(ms,160):ms*PACE));
 const rnd=n=>{try{const u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]%n}catch(e){return Math.floor(Math.random()*n)}};
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);const t=a[i];a[i]=a[j];a[j]=t}return a};
@@ -633,7 +635,7 @@ async function playStep(s,t){
     if(!await wait(350,t))return;
     addNode(bubble(s));
     if(hwave)hwave.classList.add('on');
-    const ok=await wait(Math.min(3400,800+s.text.length*40),t);
+    const ok=await wait(Math.min(3000,700+s.text.length*30),t);
     if(hwave)hwave.classList.remove('on');
     if(!ok)return;
     return;
@@ -682,7 +684,7 @@ function askUser(step){
     scrollTo_(C.ask);
   });
 }
-function showFeedback(o,label){
+function showFeedback(o,label,playing){
   const head={best:'Doğru refleks',part:'Yarım doğru',bad:'Tuzağa düştün'}[o.res];
   C.fb.hidden=false;
   C.fb.textContent='';
@@ -693,7 +695,7 @@ function showFeedback(o,label){
   return new Promise(res=>{
     const b=el('button','btn small',label);
     b.type='button';
-    b.addEventListener('click',()=>res());
+    b.addEventListener('click',async()=>{b.disabled=true;fast=true;try{if(playing)await playing}catch(e){}fast=false;res()});
     C.fb.append(b);
     scrollTo_(C.fb);
     try{b.focus({preventScroll:true})}catch(e){}
@@ -713,13 +715,13 @@ async function run(i){
       if(t!==token)return;
       S.pts[ch.id].push(o.pts);
       renderKarne();
-      scrollTo_(P.phone);
-      for(const x of o.out){
-        if(t!==token)return;
-        await playStep(x,t);
-      }
-      if(t!==token)return;
-      await showFeedback(o,k===ch.steps.length-1?'Bölümü bitir':'Devam et');
+      const playing=(async()=>{
+        for(const x of o.out){
+          if(t!==token)return;
+          await playStep(x,t);
+        }
+      })();
+      await showFeedback(o,k===ch.steps.length-1?'Bölümü bitir':'Devam et',playing);
       if(t!==token)return;
       C.ask.hidden=true;
       C.fb.hidden=true;
