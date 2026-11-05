@@ -238,6 +238,8 @@ kbd,.mono{font-family:var(--f-mono)}
 }
 
 [hidden]{display:none!important}
+.nudge{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap}
+.k-share{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 /* Marka şeridi */
 .brand{display:flex;align-items:center;gap:14px;padding-block:20px 0}
 .brand img{width:64px;height:64px;border-radius:14px;background:#fff;flex:none;object-fit:contain}
@@ -323,6 +325,11 @@ kbd,.mono{font-family:var(--f-mono)}
         <div class="score"><span id="kScore">–</span><span class="of">/ 12</span></div>
         <p class="k-title" id="kTitle">Henüz bitmedi</p>
         <p class="k-text" id="kText">Üç hikâyeyi tamamla.</p>
+        <div class="row k-share">
+          <button class="btn small" id="kShare" type="button">Testi diğerleriyle paylaş</button>
+          <a class="btn small ghost" id="kWa" href="https://wa.me/" target="_blank" rel="noopener noreferrer">WhatsApp’ta gönder</a>
+        </div>
+        <p class="status" id="kShareMsg" aria-live="polite"></p>
       </div>
       <div class="bars" id="kBars"></div>
     </div>
@@ -362,7 +369,7 @@ kbd,.mono{font-family:var(--f-mono)}
         <ul>
           <li>Bankanı hemen ara. Kartın arkasındaki numarayı kullan.</li>
           <li>Ekran görüntülerini, IBAN’ı ve numaraları sakla.</li>
-          <li>En yakın karakola ya da jandarmaya başvur. Acil durumda 155 (Polis İmdat) veya 156 (Jandarma).</li>
+          <li>En yakın karakola ya da jandarmaya başvur. Her türlü acil durum için 112’yi ara.</li>
           <li>Öğrenciysen bir yetişkine hemen söyle. Utanılacak bir şey değil.</li>
         </ul>
       </article>
@@ -401,6 +408,8 @@ kbd,.mono{font-family:var(--f-mono)}
     <a class="btn" href="uyari-videosu.mp4" download>Videoyu indir</a>
   </section>
 
+  <button class="btn nudge" id="nudge" type="button" hidden></button>
+
   <footer class="foot">
     <p class="by">Hazırlayan: Gölcük Şehit Volkan Tantürk Mesleki ve Teknik Anadolu Lisesi, Bilişim Teknolojileri Alanı</p>
     <p>Hikâyelerdeki kişiler, olaylar, telefon numaraları, IBAN ve bağlantılar kurgudur.</p>
@@ -415,7 +424,7 @@ const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 let fast=false;
-let PACE=0;
+let PACE=.2;
 const sleep=ms=>new Promise(r=>setTimeout(r,fast?0:RM?Math.min(ms,160):ms*PACE));
 const rnd=n=>{try{const u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]%n}catch(e){return Math.floor(Math.random()*n)}};
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
@@ -658,6 +667,22 @@ async function playStep(s,t){
   }
 }
 
+/* ---------- Aşağı kaydırma ipucu ---------- */
+const NUDGE=$('#nudge');let nTarget=null,nIO=null;
+function nudge(target,label){
+  nTarget=target;NUDGE.textContent=label;
+  if(nIO)nIO.disconnect();
+  try{
+    nIO=new IntersectionObserver(es=>{
+      const e=es[es.length-1];
+      NUDGE.hidden=!(nTarget&&!nTarget.hidden&&!e.isIntersecting&&e.boundingClientRect.top>0);
+    },{threshold:.12});
+    nIO.observe(target);
+  }catch(e){NUDGE.hidden=false}
+}
+function nudgeOff(){nTarget=null;if(nIO)nIO.disconnect();NUDGE.hidden=true}
+NUDGE.addEventListener('click',()=>{const t=nTarget;nudgeOff();if(t){try{t.scrollIntoView({behavior:SM,block:'start'})}catch(e){}}});
+
 /* ---------- Karar ve geri bildirim ---------- */
 const RES_TAG={best:'EN GÜVENLİ',part:'YARIM DOĞRU',bad:'TUZAK'};
 function askUser(step){
@@ -675,6 +700,7 @@ function askUser(step){
       b.addEventListener('click',()=>{
         if(list.dataset.locked)return;
         list.dataset.locked='1';
+        nudgeOff();
         items.forEach(x=>{
           x.b.classList.add('locked','res-'+x.o.res);
           x.b.setAttribute('aria-disabled','true');
@@ -687,7 +713,7 @@ function askUser(step){
       list.append(b);
     });
     C.ask.append(list);
-    scrollTo_(C.ask);
+    nudge(C.ask,'Kararını ver ↓');
   });
 }
 function showFeedback(o,label,playing){
@@ -701,15 +727,17 @@ function showFeedback(o,label,playing){
   return new Promise(res=>{
     const b=el('button','btn small',label);
     b.type='button';
-    b.addEventListener('click',async()=>{b.disabled=true;fast=true;try{if(playing)await playing}catch(e){}fast=false;res()});
+    b.addEventListener('click',async()=>{nudgeOff();b.disabled=true;fast=true;try{if(playing)await playing}catch(e){}fast=false;res()});
     C.fb.append(b);
     try{b.focus({preventScroll:true})}catch(e){}
   });
 }
 
 /* ---------- Akış ---------- */
+let segStart=0;
 async function run(i){
   const t=token,ch=CH[i];
+  segStart=Date.now();
   C.hint.hidden=true;
   if(ch.scene){C.scene.textContent=ch.scene;C.scene.hidden=false}
   scrollTo_(P.phone);
@@ -717,6 +745,8 @@ async function run(i){
     if(t!==token)return;
     const s=ch.steps[k];
     if(s.t==='ask'){
+      const rem=3000-(Date.now()-segStart);
+      if(rem>0){await new Promise(r=>setTimeout(r,rem));if(t!==token)return}
       const o=await askUser(s);
       if(t!==token)return;
       S.pts[ch.id].push(o.pts);
@@ -728,13 +758,14 @@ async function run(i){
           if(t!==token)return;
           await playStep(x,t);
         }
-        PACE=0;
-        if(t===token)scrollTo_(C.fb);
+        PACE=.2;
+        if(t===token)nudge(C.fb,'Açıklamayı oku ↓');
       })();
       await showFeedback(o,k===ch.steps.length-1?'Bölümü bitir':'Devam et',playing);
       if(t!==token)return;
       C.ask.hidden=true;
       C.fb.hidden=true;
+      segStart=Date.now();
       scrollTo_(P.phone);
     }else{
       await playStep(s,t);
@@ -805,6 +836,7 @@ function buildOverlay(i){
 }
 function selectChapter(i){
   token++;
+  nudgeOff();
   cur=i;
   clearInterval(timerId);
   hwave=null;
@@ -844,6 +876,23 @@ function renderTabs(){
 }
 
 /* ---------- Karne ---------- */
+let kShareText='';
+function updateKShare(total,n){
+  let url='';
+  try{const u=location.href;if(/^https?:/i.test(u))url=u.split('#')[0]}catch(e){}
+  kShareText='Okulumuz uyarıyor: Yapay zekâ dolandırıcılığına karşı 3 kısa hikâyelik bir test var. '
+    +(n===3?total+' / 12 puan aldım. Sen kaç puan alırsın? ':'Sen de dene. ')
+    +(url?'\n'+url:'');
+  $('#kWa').href='https://wa.me/?text='+encodeURIComponent(kShareText);
+}
+$('#kShare').addEventListener('click',async()=>{
+  const msg=$('#kShareMsg');
+  try{
+    if(navigator.share){await navigator.share({title:'Okulumuz uyarıyor',text:kShareText});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(kShareText);msg.textContent='Kopyalandı. Gruba yapıştırabilirsin.'}
+  catch(e){msg.textContent='Kopyalanamadı. WhatsApp düğmesini kullan.'}
+});
 function renderKarne(){
   const total=CH.reduce((a,c,i)=>a+(S.done[i]?sum(S.pts[c.id]):0),0);
   const n=CH.filter((c,i)=>S.done[i]).length;
@@ -870,6 +919,7 @@ function renderKarne(){
   }
   $('#kTitle').textContent=title;
   $('#kText').textContent=text;
+  updateKShare(total,n);
 }
 
 /* ---------- Aile şifresi ---------- */
