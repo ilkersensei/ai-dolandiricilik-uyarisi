@@ -146,6 +146,7 @@ h1{font-family:var(--f-display);font-weight:800;font-size:clamp(2.5rem,9.5vw,4.8
 .tag{display:inline-block;font-family:var(--f-mono);font-size:.74rem;background:var(--ink);color:var(--bg);padding:3px 9px;border-radius:3px;letter-spacing:.03em}
 .c-top h3{font-family:var(--f-display);font-size:clamp(1.5rem,4.5vw,2.1rem);line-height:1.05;margin:10px 0 6px;font-weight:700;letter-spacing:-.01em}
 .c-top p{margin:0;color:var(--muted)}
+.scene{margin:0;padding:14px 16px;background:var(--surface);border-left:4px solid var(--signal);border-radius:0 8px 8px 0;font-size:1.02rem;line-height:1.5}
 .hint{margin:0;padding:12px 14px;background:var(--surface);border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:.95rem}
 .q{font-family:var(--f-display);font-weight:700;font-size:1.3rem;margin:0 0 12px;line-height:1.2}
 .opts{display:grid;gap:10px}
@@ -236,6 +237,7 @@ kbd,.mono{font-family:var(--f-mono)}
   .fill{transition:none}
 }
 
+[hidden]{display:none!important}
 /* Marka şeridi */
 .brand{display:flex;align-items:center;gap:14px;padding-block:20px 0}
 .brand img{width:64px;height:64px;border-radius:14px;background:#fff;flex:none;object-fit:contain}
@@ -305,6 +307,7 @@ kbd,.mono{font-family:var(--f-mono)}
           <p id="cBlurb"></p>
         </div>
         <p class="hint" id="cHint"></p>
+        <p class="scene" id="cScene" hidden></p>
         <div id="cAsk" hidden></div>
         <div id="cFb" class="c-fb" hidden aria-live="polite"></div>
         <div id="cEnd" class="c-end" hidden></div>
@@ -412,7 +415,7 @@ const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 let fast=false;
-const PACE=.38;
+let PACE=0;
 const sleep=ms=>new Promise(r=>setTimeout(r,fast?0:RM?Math.min(ms,160):ms*PACE));
 const rnd=n=>{try{const u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]%n}catch(e){return Math.floor(Math.random()*n)}};
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
@@ -425,6 +428,7 @@ const CH=[
 {
   id:'ses', tab:'Ses klonlama', who:'Veli için',
   title:'Gece gelen arama',
+  scene:'Telefonunuzu açıyorsunuz ve evladınızın sesiyle şunu duyuyorsunuz: “Çok zor durumdayım, kaza yaptım. Hemen şu hesaba para gönder, yoksa beni bırakmıyorlar.”',
   blurb:'Salı gecesi. Ayşe Hanım’ın telefonunda kayıtlı olmayan bir numara.',
   start:{kind:'call',time:'Salı · 22:48',name:'Bilinmeyen numara',sub:'+90 5•• ••• 42 17',av:'?',btn:'Cevapla',hint:'Aramayı cevaplamak için yeşil düğmeye dokun.'},
   flags:[
@@ -469,8 +473,9 @@ const CH=[
 {
   id:'hesap', tab:'Hesap sızdırma', who:'Öğrenci için',
   title:'Altı haneli kod',
+  scene:'Berk’ten mesaj geliyor: “Zeynep, harika bir burs fırsatı buldum, seni de kayıt ediyorum. Lütfen o kodu hemen bana gönderir misin?” Telefonuna bakıyorsun.',
   blurb:'Cuma, 16:20. Zeynep’in WhatsApp’ına sınıf arkadaşı Berk’ten mesaj geliyor.',
-  start:{kind:'chat',time:'Cuma · 16:20',name:'Berk',sub:'WhatsApp',av:'B',btn:'Mesajı aç',preview:'Selam Zeynep, yanlışlıkla sana bir kod gitti…',hint:'Mesajı açmak için düğmeye dokun.'},
+  start:{kind:'chat',time:'Cuma · 16:20',name:'Berk',sub:'WhatsApp',av:'B',btn:'Mesajı aç',preview:'Selam Zeynep bunu mutlaka görmelisin…',hint:'Mesajı açmak için düğmeye dokun.'},
   flags:[
     ['Kod isteyen arkadaş','Doğrulama kodu yalnızca hesabın sahibine aittir. İsteyen kim olursa olsun paylaşma.'],
     ['“Süre doluyor”','Acele, düşünmeni engellemek için eklenir.'],
@@ -478,10 +483,10 @@ const CH=[
   ],
   steps:[
     {t:'head',mode:'chat',name:'Berk',sub:'çevrimiçi',av:'B'},
-    {t:'in',who:'Berk',text:'Selam Zeynep, yanlışlıkla sana bir kod gitti. Bana söyler misin?'},
-    {t:'in',who:'Berk',text:'Telefon numaramı doğrularken senin numaran girilmiş galiba.'},
+    {t:'in',who:'Berk',text:'Selam Zeynep, bunu mutlaka görmelisin.'},
+    {t:'in',who:'Berk',text:'Harika bir burs fırsatı buldum, seni de kayıt ediyorum.'},
     {t:'sys',cls:'sms',text:'SMS · WhatsApp kodunuz: 482-916. Bu kodu kimseyle paylaşmayın.'},
-    {t:'in',who:'Berk',text:'Çabuk bak lütfen, süre doluyor.'},
+    {t:'in',who:'Berk',text:'Lütfen o kodu hemen bana gönderir misin? Süre doluyor.'},
     {t:'ask',q:'Kodla ne yaparsın?',opts:[
       {label:'Kodu paylaşmam. Berk’i arayarak ya da yüz yüze görerek sorarım.',res:'best',pts:2,
        out:[{t:'out',text:'Bu kodu kimseyle paylaşmıyorum. Seni arayacağım.'},{t:'sys',text:'Zeynep Berk’i arıyor. Berk: “Ben sana hiçbir şey yazmadım. Hesabım çalınmış olmalı.”'}],
@@ -489,7 +494,7 @@ const CH=[
       {label:'Berk’e “Sen misin?” yazıp cevabını beklerim.',res:'part',pts:1,
        out:[{t:'out',text:'Sen misin gerçekten?'},{t:'in',who:'Berk',text:'Evet benim, kod için yazıyorum, çabuk!'}],
        why:'Aynı hesapta yazışmak teyit sayılmaz. Hesap ele geçirilmişse cevap veren dolandırıcıdır. Teyit için arama ya da yüz yüze konuşma gerekir. Kod ise asla paylaşılmaz.'},
-      {label:'Kodu yazarım. Arkadaşım zor durumda.',res:'bad',pts:0,
+      {label:'Kodu hemen yazarım. Bu fırsatı kaçıramam.',res:'bad',pts:0,
        out:[{t:'out',text:'482916'},{t:'sys',text:'WhatsApp Zeynep’in telefonunda kapanıyor. Hesap başka bir cihazda açılıyor.'},{t:'sys',text:'Rehberdeki kişilere “acil para lazım” mesajları gitmeye başlıyor.'}],
        why:'Kodu verdiğin an hesabın başka bir cihazda açılır ve sen dışarıda kalırsın. Sonra rehberindeki herkese para isteyen mesajlar gider.'}
     ]},
@@ -515,6 +520,7 @@ const CH=[
 {
   id:'para', tab:'Para talebi', who:'Öğretmen için',
   title:'Acil ödeme rica',
+  scene:'Müdür Yardımcısı yazıyor: “Yolda kaldım, hesabıma 14.500 TL atar mısın? Okula gelince hemen ödeyeceğim.”',
   blurb:'Çarşamba, 08:15. Selin Öğretmen ders başlamadan önce telefonuna bakıyor.',
   start:{kind:'chat',time:'Çarşamba · 08:15',name:'Müdür Yardımcısı',sub:'yeni numara',av:'M',btn:'Mesajı aç',preview:'Günaydın Selin Hocam. Numaram değişti…',hint:'Mesajı açmak için düğmeye dokun.'},
   flags:[
@@ -525,18 +531,18 @@ const CH=[
   steps:[
     {t:'head',mode:'chat',name:'Müdür Yardımcısı',sub:'kayıtlı değil',av:'M'},
     {t:'in',who:'Müdür Yardımcısı',text:'Günaydın Selin Hocam. Numaram değişti, kaydeder misiniz?'},
-    {t:'in',who:'Müdür Yardımcısı',text:'Müsaitseniz küçük bir ricam var. Gezi için tedarikçiye ödeme yapacağım ama kartımda limit sorunu çıktı.'},
-    {t:'in',who:'Müdür Yardımcısı',text:'24.500 TL’yi şu hesaba gönderir misiniz? Akşam iade ederim. Şimdilik kimseye bahsetmeyin.'},
-    {t:'in',cls:'iban',who:'Hesap bilgisi (örnek)',text:'TR00 0000 0000 0000 0000 0000 00'},
+    {t:'in',who:'Müdür Yardımcısı',text:'Müsaitseniz küçük bir ricam var. Yolda aracım arıza yaptı, tamirciye ödeme yapacağım ama kartımda limit sorunu çıktı.'},
+    {t:'in',who:'Müdür Yardımcısı',text:'14.500 TL’yi şu hesaba gönderir misiniz? Okula gelince hemen öderim. Şimdilik kimseye bahsetmeyin.'},
+    {t:'in',cls:'iban',who:'Hesap bilgisi (örnek)',text:'TR01 2345 6789 0123 4567 8901 23'},
     {t:'ask',q:'Ne yaparsın?',opts:[
       {label:'Mesajla işlem yapmam. Müdür yardımcısını bilinen numarasından arar ya da yüz yüze sorarım.',res:'best',pts:2,
        out:[{t:'out',text:'Hocam sizi okuldaki numaranızdan arayacağım.'},{t:'sys',text:'Selin Öğretmen kayıtlı numarayı arıyor. Müdür yardımcısı: “Ben mi yazdım? Hayır, telefonum yanımda.”'}],
        why:'Doğru. Üst makam, acil ve gizli para isteği klasik bir tuzaktır. Kayıtlı numaradan ya da yüz yüze teyit edin.'},
       {label:'Göndermeden önce IBAN’ın kime ait olduğuna bakarım.',res:'part',pts:1,
-       out:[{t:'sys',text:'Hesap sahibi okulla ilgisi olmayan biri. Selin Öğretmen duraksıyor.'},{t:'in',who:'Müdür Yardımcısı',text:'Tedarikçinin hesabı bu, acele edelim lütfen.'}],
+       out:[{t:'sys',text:'Hesap sahibi okulla ilgisi olmayan biri. Selin Öğretmen duraksıyor.'},{t:'in',who:'Müdür Yardımcısı',text:'Tamircinin hesabı bu, acele edelim lütfen.'}],
        why:'Doğru yönde ama yeterli değil. Hesap bir aracının, kiralanmış ya da çalıntı bir hesap olabilir. Asıl teyit, isteği yaptığı iddia edilen kişiye bilinen kanaldan ulaşmaktır.'},
       {label:'Üst makamın isteği. Hemen gönderirim.',res:'bad',pts:0,
-       out:[{t:'out',text:'Tabii hocam, gönderiyorum.'},{t:'sys',text:'24.500 TL gidiyor. Teneffüste gerçek müdür yardımcısı koridorda: “Hangi ödeme?”'}],
+       out:[{t:'out',text:'Tabii hocam, gönderiyorum.'},{t:'sys',text:'14.500 TL gidiyor. Teneffüste gerçek müdür yardımcısı koridorda: “Hangi ödeme?”'}],
        why:'Rütbe baskısı dolandırıcının işine yarar. “Numaram değişti”, “acil para” ve “kimseye söyleme” bir araya geldiyse dur ve teyit et.'}
     ]},
     {t:'head',mode:'call',name:'Müdür Yardımcısı',sub:'görüntülü arama',av:'M'},
@@ -564,7 +570,7 @@ const CH=[
 const S={pts:{},done:{}};
 let token=0,cur=0,timerId=null,hwave=null;
 const P={phone:$('#phone'),head:$('#phead'),body:$('#pbody'),over:$('#overlay'),clock:$('#clock')};
-const C={title:$('#cTitle'),blurb:$('#cBlurb'),hint:$('#cHint'),ask:$('#cAsk'),fb:$('#cFb'),end:$('#cEnd'),tag:$('#tagWho')};
+const C={title:$('#cTitle'),blurb:$('#cBlurb'),hint:$('#cHint'),scene:$('#cScene'),ask:$('#cAsk'),fb:$('#cFb'),end:$('#cEnd'),tag:$('#tagWho')};
 const scrollTo_=n=>{try{n.scrollIntoView({behavior:SM,block:'nearest'})}catch(e){}};
 
 function buildWave(node,n){
@@ -697,7 +703,6 @@ function showFeedback(o,label,playing){
     b.type='button';
     b.addEventListener('click',async()=>{b.disabled=true;fast=true;try{if(playing)await playing}catch(e){}fast=false;res()});
     C.fb.append(b);
-    scrollTo_(C.fb);
     try{b.focus({preventScroll:true})}catch(e){}
   });
 }
@@ -706,6 +711,7 @@ function showFeedback(o,label,playing){
 async function run(i){
   const t=token,ch=CH[i];
   C.hint.hidden=true;
+  if(ch.scene){C.scene.textContent=ch.scene;C.scene.hidden=false}
   scrollTo_(P.phone);
   for(let k=0;k<ch.steps.length;k++){
     if(t!==token)return;
@@ -715,11 +721,15 @@ async function run(i){
       if(t!==token)return;
       S.pts[ch.id].push(o.pts);
       renderKarne();
+      scrollTo_(P.phone);
       const playing=(async()=>{
+        PACE=.35;
         for(const x of o.out){
           if(t!==token)return;
           await playStep(x,t);
         }
+        PACE=0;
+        if(t===token)scrollTo_(C.fb);
       })();
       await showFeedback(o,k===ch.steps.length-1?'Bölümü bitir':'Devam et',playing);
       if(t!==token)return;
@@ -809,6 +819,7 @@ function selectChapter(i){
   C.tag.textContent=ch.who;
   C.hint.hidden=false;
   C.hint.textContent=ch.start.hint;
+  C.scene.hidden=true;C.scene.textContent='';
   C.ask.hidden=true;C.ask.textContent='';
   C.fb.hidden=true;C.fb.textContent='';
   C.end.hidden=true;C.end.textContent='';
